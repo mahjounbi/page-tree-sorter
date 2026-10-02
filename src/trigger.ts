@@ -7,8 +7,8 @@ const queue = new Queue({ key: SORT_QUEUE });
 
 type PageEvent = { eventType?: string; content?: { id?: string | number } };
 
-// Runs on every page created, moved or updated by a person (the manifest
-// ignores the app's own moves). It only checks for a rule; the sorting itself
+// Runs on every page created, moved or updated, including the app's own moves
+// (Confluence triggers can't ignore them; the re-run plans zero moves). It only checks for a rule; the sorting itself
 // runs in the queue consumer, which has a longer time limit and handles one
 // parent at a time.
 export async function onPageChanged(event: PageEvent): Promise<void> {

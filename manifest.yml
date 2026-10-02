@@ -14,9 +14,8 @@ modules:
         - avi:confluence:created:page
         - avi:confluence:moved:page
         - avi:confluence:updated:page
-      filter:
-        # The app's own moves must not wake it up again (ADR-002).
-        ignoreSelf: true
+      # ignoreSelf only works with Jira events, so the app's own moves wake it up
+      # too. That costs one extra run per parent: a sorted tree plans zero moves.
   consumer:
     - key: sort-parent-consumer
       queue: sort-parent
@@ -35,16 +34,16 @@ resources:
     path: static/sorter-ui/dist
 permissions:
   scopes:
-    - read:page:confluence           # child pages, creation dates, page parent
-    - write:page:confluence          # keep-sorted rule (page content property)
-    - read:hierarchical-content:confluence  # direct children, in sidebar order
-    - read:folder:confluence         # creation date of child folders
+    - read:confluence-content.summary # required by the page triggers
+    - read:page:confluence # child pages, creation dates, page parent
+    - write:page:confluence # keep-sorted rule (page content property)
+    - read:hierarchical-content:confluence # direct children, in sidebar order
+    - read:folder:confluence # creation date of child folders
     - read:whiteboard:confluence
     - read:database:confluence
     - read:embed:confluence
-    - write:confluence-content       # move a page before/after a sibling (REST v1)
+    - write:confluence-content # move a page before/after a sibling (REST v1)
 app:
-  # Replaced by `forge register` with the app id of the vendor account.
-  id: ari:cloud:ecosystem::app/00000000-0000-0000-0000-000000000000
+  id: ari:cloud:ecosystem::app/31ffdd52-f918-4a88-9df7-ab6d984d68f4
   runtime:
     name: nodejs22.x
