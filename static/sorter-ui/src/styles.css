@@ -1,0 +1,69 @@
+body {
+  background: var(--ds-surface-overlay, #fff);
+  color: var(--ds-text, #172b4d);
+}
+
+.sorter {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: var(--ds-space-300, 24px) var(--ds-space-300, 24px) 0;
+  box-sizing: border-box;
+}
+
+.layout h2 + * { margin-top: var(--ds-space-100, 8px); }
+.body { flex: 1; min-height: 0; overflow-y: auto; }
+.subtle { margin: var(--ds-space-050, 4px) 0 0; color: var(--ds-text-subtle, #44546f); }
+.hint { margin: var(--ds-space-100, 8px) 0 0; font-size: 12px; color: var(--ds-text-subtlest, #626f86); }
+.center { display: flex; justify-content: center; padding: var(--ds-space-600, 48px) 0; }
+
+.sorter > header { margin-bottom: var(--ds-space-300, 24px); }
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(0, 1.4fr);
+  gap: var(--ds-space-400, 32px);
+}
+
+@media (max-width: 600px) {
+  .layout { grid-template-columns: 1fr; gap: var(--ds-space-300, 24px); }
+}
+
+.keep { margin-top: var(--ds-space-300, 24px); padding-top: var(--ds-space-200, 16px); border-top: 1px solid var(--ds-border, #dcdfe4); }
+.keep .hint { margin-left: var(--ds-space-300, 24px); }
+
+.preview {
+  margin: var(--ds-space-150, 12px) 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: max(160px, calc(100vh - 300px));
+  overflow-y: auto;
+  border: 1px solid var(--ds-border, #dcdfe4);
+  border-radius: var(--ds-border-radius, 4px);
+  counter-reset: row;
+}
+
+.preview li {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-100, 8px);
+  padding: var(--ds-space-075, 6px) var(--ds-space-150, 12px);
+  border-bottom: 1px solid var(--ds-border, #dcdfe4);
+  counter-increment: row;
+}
+
+.preview li:last-child { border-bottom: none; }
+.preview li::before { content: counter(row); min-width: 2.5ch; text-align: right; color: var(--ds-text-subtlest, #626f86); font-variant-numeric: tabular-nums; }
+.preview .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preview .type { font-size: 12px; color: var(--ds-text-subtlest, #626f86); }
+
+.status { margin-bottom: var(--ds-space-300, 24px); }
+
+.sorter > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ds-space-100, 8px);
+  padding: var(--ds-space-200, 16px) 0 var(--ds-space-300, 24px);
+}
+.preview:focus-visible { outline: 2px solid var(--ds-border-focused, #388bff); outline-offset: 2px; }
+.rule-on { margin: 0 0 var(--ds-space-100, 8px); font-weight: 600; color: var(--ds-text-success, #216e4e); }

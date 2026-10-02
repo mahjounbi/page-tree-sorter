@@ -1,0 +1,23 @@
+{
+  "name": "page-tree-sorter",
+  "private": true,
+  "description": "Forge app: sort Confluence child pages by title or date, and keep them sorted.",
+  "type": "module",
+  "scripts": {
+    "build": "npm --prefix static/sorter-ui run build",
+    "test": "vitest run",
+    "typecheck": "tsc && npm --prefix static/sorter-ui run typecheck",
+    "dev:mock": "npm --prefix static/sorter-ui run dev:mock"
+  },
+  "dependencies": {
+    "@forge/api": "^8.2.0",
+    "@forge/events": "^3.0.7",
+    "@forge/resolver": "^2.0.0"
+  },
+  "devDependencies": {
+    "@forge/cli": "^14.1.0",
+    "@types/node": "^22.0.0",
+    "typescript": "5.9",
+    "vitest": "^5.0.3"
+  }
+}

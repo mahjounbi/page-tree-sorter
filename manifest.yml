@@ -1,0 +1,50 @@
+# "Runs on Atlassian" by design (ADR-002): Forge functions and Custom UI only,
+# no remotes, no external domains, no Forge storage. The keep-sorted rule is a
+# content property on the parent page.
+modules:
+  confluence:contentAction:
+    - key: sort-child-pages
+      title: Sort child pages
+      resource: main
+      viewportSize: large
+  trigger:
+    - key: keep-sorted
+      function: on-page-changed
+      events:
+        - avi:confluence:created:page
+        - avi:confluence:moved:page
+        - avi:confluence:updated:page
+      filter:
+        # The app's own moves must not wake it up again (ADR-002).
+        ignoreSelf: true
+  consumer:
+    - key: sort-parent-consumer
+      queue: sort-parent
+      resolver:
+        function: sort-worker
+        method: sort-parent
+  function:
+    - key: on-page-changed
+      handler: trigger.onPageChanged
+    - key: sort-worker
+      handler: worker.handler
+      # Large sorts move pages one by one and wait on rate limits.
+      timeoutSeconds: 900
+resources:
+  - key: main
+    path: static/sorter-ui/dist
+permissions:
+  scopes:
+    - read:page:confluence           # child pages, creation dates, page parent
+    - write:page:confluence          # keep-sorted rule (page content property)
+    - read:hierarchical-content:confluence  # direct children, in sidebar order
+    - read:folder:confluence         # creation date of child folders
+    - read:whiteboard:confluence
+    - read:database:confluence
+    - read:embed:confluence
+    - write:confluence-content       # move a page before/after a sibling (REST v1)
+app:
+  # Replaced by `forge register` with the app id of the vendor account.
+  id: ari:cloud:ecosystem::app/00000000-0000-0000-0000-000000000000
+  runtime:
+    name: nodejs22.x
