@@ -10,17 +10,9 @@ import Spinner from "@atlaskit/spinner";
 import { applyPlan, deleteRule, getRule, listChildren, sortAndSetRule, withCreatedDates } from "../../../src/core/confluence";
 import { ConfluenceError, SortCancelled, type ConfluenceRequest } from "../../../src/core/http";
 import { needsDates, planMoves, sortChildren, type Child, type SortOrder } from "../../../src/core/sort";
+import { MESSAGES, type Lang } from "./i18n";
 
-const ORDER_LABELS: Record<SortOrder, string> = {
-  "title-asc": "Title, A to Z",
-  "title-desc": "Title, Z to A",
-  "created-desc": "Newest first",
-  "created-asc": "Oldest first",
-};
-
-const ORDER_OPTIONS = (Object.keys(ORDER_LABELS) as SortOrder[]).map((value) => ({ name: "order", value, label: ORDER_LABELS[value] }));
-
-const TYPE_LABELS: Record<string, string> = { folder: "Folder", whiteboard: "Whiteboard", database: "Database", embed: "Smart link" };
+const ORDERS: SortOrder[] = ["title-asc", "title-desc", "created-desc", "created-asc"];
 
 type Phase =
   | { name: "loading" }
@@ -35,7 +27,9 @@ type Props = {
   pageId: string;
   pageTitle?: string;
   locale: string;
-  onClose: () => void;
+  lang: Lang;
+  // `changed` is true when pages moved, so the host page can refresh its sidebar.
+  onClose: (changed: boolean) => void;
 };
 
 function errorPhase(error: unknown): Phase {
@@ -43,9 +37,9 @@ function errorPhase(error: unknown): Phase {
   return { name: "error", message: (error as Error).message, retryable: status !== 401 && status !== 403 };
 }
 
-const plural = (count: number, word: string) => `${count.toLocaleString("en")} ${word}${count === 1 ? "" : "s"}`;
-
-export function App({ request, pageId, pageTitle, locale, onClose }: Props) {
+export function App({ request, pageId, pageTitle, locale, lang, onClose }: Props) {
+  const m = MESSAGES[lang];
+  const orderOptions = ORDERS.map((value) => ({ name: "order", value, label: m.orders[value] }));
   const [phase, setPhase] = useState<Phase>({ name: "loading" });
   const [children, setChildren] = useState<Child[]>([]);
   const [datesLoaded, setDatesLoaded] = useState(false);
@@ -53,6 +47,7 @@ export function App({ request, pageId, pageTitle, locale, onClose }: Props) {
   const [savedRule, setSavedRule] = useState<SortOrder | null>(null);
   const [keep, setKeep] = useState(false);
   const controller = useRef<AbortController | null>(null);
+  const changed = useRef(false);
 
   const load = useCallback(async () => {
     setPhase({ name: "loading" });
@@ -119,11 +114,13 @@ export function App({ request, pageId, pageTitle, locale, onClose }: Props) {
         signal: run.signal,
         onProgress: (done) => { moved = done; setPhase({ name: "sorting", done, total: moves.length }); },
       });
+      if (moved > 0) changed.current = true;
       setChildren(sorted);
       setSavedRule(keep ? order : null);
       setPhase({ name: "done", total: children.length, moved, keep, previous: moved > 0 ? previous : null, restored: false });
     } catch (error) {
       if (error instanceof SortCancelled) {
+        if (moved > 0) changed.current = true;
         await reloadChildren();
         setPhase({ name: "stopped", moved });
         return;
@@ -145,6 +142,7 @@ export function App({ request, pageId, pageTitle, locale, onClose }: Props) {
     try {
       if (savedRule !== null) await deleteRule(request, pageId);
       await applyPlan(request, plan, { onProgress: (done) => setPhase({ name: "sorting", done, total: plan.length }) });
+      if (plan.length > 0) changed.current = true;
       setSavedRule(null);
       setKeep(false);
       setChildren(back.map((id) => byId.get(id)!));
@@ -161,43 +159,43 @@ export function App({ request, pageId, pageTitle, locale, onClose }: Props) {
   return (
     <main className="sorter">
       <header>
-        <Heading size="large" as="h1">Sort child pages</Heading>
-        {pageTitle ? <p className="subtle">Under “{pageTitle}”</p> : null}
+        <Heading size="large" as="h1">{m.heading}</Heading>
+        {pageTitle ? <p className="subtle">{m.under(pageTitle)}</p> : null}
       </header>
 
       <div className="body">
       {phase.name === "loading" ? (
-        <div className="center" role="status"><Spinner label="Loading child pages" /></div>
+        <div className="center" role="status"><Spinner label={m.loading} /></div>
       ) : null}
 
       {phase.name === "error" ? (
-        <SectionMessage appearance="error" title="The pages could not be sorted" actions={phase.retryable ? <SectionMessageAction onClick={() => void load()}>Try again</SectionMessageAction> : undefined}>
+        <SectionMessage appearance="error" title={m.errorTitle} actions={phase.retryable ? <SectionMessageAction onClick={() => void load()}>{m.tryAgain}</SectionMessageAction> : undefined}>
           <p>{phase.message}</p>
         </SectionMessage>
       ) : null}
 
       {phase.name === "sorting" ? (
         <div className="status" role="status">
-          <ProgressBar ariaLabel="Sorting pages" value={phase.total ? phase.done / phase.total : 1} />
-          <p className="subtle">{`Moving ${phase.done.toLocaleString("en")} of ${plural(phase.total, "page")}…`}</p>
+          <ProgressBar ariaLabel={m.sortingAria} value={phase.total ? phase.done / phase.total : 1} />
+          <p className="subtle">{m.moving(phase.done, phase.total)}</p>
         </div>
       ) : null}
 
       {phase.name === "done" ? (
         <div className="status">
           {phase.restored ? (
-            <SectionMessage appearance="information" title="Previous order restored">
-              <p>The pages are back in the order they had before sorting. Automatic sorting is off.</p>
+            <SectionMessage appearance="information" title={m.restoredTitle}>
+              <p>{m.restoredText}</p>
             </SectionMessage>
           ) : (
             <SectionMessage
               appearance="success"
-              title={phase.moved ? `${plural(phase.moved, "page")} moved` : "Saved"}
-              actions={phase.previous ? <SectionMessageAction onClick={() => void restore(phase.previous!)}>Restore previous order</SectionMessageAction> : undefined}
+              title={phase.moved ? m.movedTitle(phase.moved) : m.saved}
+              actions={phase.previous ? <SectionMessageAction onClick={() => void restore(phase.previous!)}>{m.restore}</SectionMessageAction> : undefined}
             >
               <p>
-                {phase.moved ? `All ${plural(phase.total, "child page")} are now in order.` : phase.keep ? "Automatic sorting is on." : "Automatic sorting is off."}
-                {phase.moved && phase.keep ? " They will stay sorted automatically." : ""}
+                {phase.moved ? m.allInOrder(phase.total) : phase.keep ? m.ruleOn : m.ruleOff}
+                {phase.moved && phase.keep ? m.staySorted : ""}
               </p>
             </SectionMessage>
           )}
@@ -206,64 +204,64 @@ export function App({ request, pageId, pageTitle, locale, onClose }: Props) {
 
       {phase.name === "stopped" ? (
         <div className="status">
-          <SectionMessage appearance="information" title="Sorting stopped">
+          <SectionMessage appearance="information" title={m.stoppedTitle}>
             <p>
-              {phase.moved ? `${plural(phase.moved, "page")} had already moved. The preview shows the current order.` : "No page was moved."}
-              {phase.moved && savedRule !== null ? ` Automatic sorting (${ORDER_LABELS[savedRule]}) is still on: the next page change puts them back in that order.` : ""}
+              {phase.moved ? m.alreadyMoved(phase.moved) : m.noneMoved}
+              {phase.moved && savedRule !== null ? m.stillOn(m.orders[savedRule]) : ""}
             </p>
           </SectionMessage>
         </div>
       ) : null}
 
       {phase.name !== "loading" && phase.name !== "error" && children.length < 2 ? (
-        <SectionMessage appearance="information" title={children.length === 0 ? "This page has no child pages" : "There is only one child page"}>
-          <p>Add child pages, then come back to sort them.</p>
+        <SectionMessage appearance="information" title={children.length === 0 ? m.noChildren : m.oneChild}>
+          <p>{m.addChildren}</p>
         </SectionMessage>
       ) : null}
 
       {phase.name !== "loading" && phase.name !== "error" && children.length >= 2 ? (
         <div className="layout">
           <section aria-labelledby="order-heading">
-            <Heading size="small" as="h2" id="order-heading">Order</Heading>
+            <Heading size="small" as="h2" id="order-heading">{m.order}</Heading>
             <RadioGroup
-              options={ORDER_OPTIONS}
+              options={orderOptions}
               value={order}
               isDisabled={busy}
               onChange={(event) => void chooseOrder(event.currentTarget.value as SortOrder)}
               aria-labelledby="order-heading"
             />
-            <p className="hint">Titles are sorted naturally: “Page 2” comes before “Page 10”.</p>
+            <p className="hint">{m.naturalHint}</p>
 
             <div className="keep">
               {savedRule !== null ? (
-                <p className="rule-on">{`Automatic sorting is on: ${ORDER_LABELS[savedRule]}.`}</p>
+                <p className="rule-on">{m.ruleOnWith(m.orders[savedRule])}</p>
               ) : null}
               <Checkbox
                 isChecked={keep}
                 isDisabled={busy}
                 onChange={(event) => setKeep(event.currentTarget.checked)}
-                label="Keep sorted automatically"
+                label={m.keep}
                 name="keep"
               />
-              <p className="hint">New, moved or renamed child pages are put back in order.</p>
+              <p className="hint">{m.keepHint}</p>
             </div>
           </section>
 
           <section aria-labelledby="preview-heading">
-            <Heading size="small" as="h2" id="preview-heading">Preview</Heading>
+            <Heading size="small" as="h2" id="preview-heading">{m.preview}</Heading>
             <p className="subtle" aria-live="polite">
               {waitingForDates
-                ? "Reading creation dates…"
+                ? m.readingDates
                 : moves.length === 0
-                  ? `${plural(children.length, "page")}, already in this order`
-                  : `${plural(children.length, "page")}, ${moves.length.toLocaleString("en")} will move`}
+                  ? m.alreadyInOrder(children.length)
+                  : m.willMove(children.length, moves.length)}
             </p>
-            <ol className="preview" tabIndex={0} aria-label="New order">
+            <ol className="preview" tabIndex={0} aria-label={m.newOrder}>
               {sorted.map((child) => (
                 <li key={child.id} className={movingIds.has(child.id) ? "moving" : undefined}>
-                  <span className="title">{child.title || "Untitled"}</span>
-                  {TYPE_LABELS[child.type] ? <span className="type">{TYPE_LABELS[child.type]}</span> : null}
-                  {movingIds.has(child.id) ? <Lozenge appearance="moved">Moves</Lozenge> : null}
+                  <span className="title">{child.title || m.untitled}</span>
+                  {m.types[child.type] ? <span className="type">{m.types[child.type]}</span> : null}
+                  {movingIds.has(child.id) ? <Lozenge appearance="moved">{m.moves}</Lozenge> : null}
                 </li>
               ))}
             </ol>
@@ -275,13 +273,13 @@ export function App({ request, pageId, pageTitle, locale, onClose }: Props) {
 
       <footer>
         {busy ? (
-          <Button onClick={() => controller.current?.abort()}>Cancel</Button>
+          <Button onClick={() => controller.current?.abort()}>{m.cancel}</Button>
         ) : (
           <>
-            <Button appearance={canSort ? "subtle" : "primary"} onClick={onClose}>Close</Button>
+            <Button appearance={canSort ? "subtle" : "primary"} onClick={() => onClose(changed.current)}>{m.close}</Button>
             {canSort ? (
               <Button appearance="primary" isDisabled={nothingToDo || waitingForDates} onClick={() => void apply()}>
-                {moves.length > 0 || !ruleChanged ? "Sort pages" : !keep ? "Turn off automatic sorting" : savedRule !== null ? "Update automatic sorting" : "Turn on automatic sorting"}
+                {moves.length > 0 || !ruleChanged ? m.sortPages : !keep ? m.turnOff : savedRule !== null ? m.update : m.turnOn}
               </Button>
             ) : null}
           </>

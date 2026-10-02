@@ -1,9 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { requestConfluence, view } from "@forge/bridge";
+import { requestConfluence, router, view } from "@forge/bridge";
 import "@atlaskit/css-reset";
 import "./styles.css";
 import { App } from "./App";
+import { languageOf } from "./i18n";
 import type { ConfluenceRequest } from "../../../src/core/http";
 import { normalizeLocale } from "../../../src/core/sort";
 
@@ -21,7 +22,10 @@ async function start() {
         pageId={String(content?.id ?? "")}
         pageTitle={content?.title}
         locale={normalizeLocale(context.locale ?? navigator.language)}
-        onClose={() => void view.close()}
+        lang={languageOf(context.locale ?? navigator.language)}
+        // The Confluence sidebar does not follow moves made by the app: reload
+        // the page so it shows the new order.
+        onClose={(changed) => void (changed ? router.reload() : view.close())}
       />
     </StrictMode>,
   );

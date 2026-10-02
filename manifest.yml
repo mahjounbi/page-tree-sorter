@@ -4,7 +4,16 @@
 modules:
   confluence:contentAction:
     - key: sort-child-pages
-      title: Sort child pages
+      title:
+        i18n: sort-child-pages.title
+      resource: main
+      viewportSize: large
+  # Second, visible entry point under the page title: Confluence files every
+  # content action under ••• > Apps.
+  confluence:contentBylineItem:
+    - key: sort-child-pages-byline
+      title:
+        i18n: sort-child-pages.byline
       resource: main
       viewportSize: large
   trigger:
@@ -43,6 +52,14 @@ permissions:
     - read:database:confluence
     - read:embed:confluence
     - write:confluence-content # move a page before/after a sibling (REST v1)
+translations:
+  resources:
+    - key: en-US
+      path: locales/en-US.json
+    - key: fr-FR
+      path: locales/fr-FR.json
+  fallback:
+    default: en-US
 app:
   id: ari:cloud:ecosystem::app/31ffdd52-f918-4a88-9df7-ab6d984d68f4
   runtime:
