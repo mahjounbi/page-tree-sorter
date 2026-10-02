@@ -62,5 +62,7 @@ translations:
     default: en-US
 app:
   id: ari:cloud:ecosystem::app/31ffdd52-f918-4a88-9df7-ab6d984d68f4
+  licensing:
+    enabled: true # paid via Atlassian; checked in the UI with context.license
   runtime:
     name: nodejs22.x
