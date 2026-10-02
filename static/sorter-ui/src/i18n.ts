@@ -91,7 +91,7 @@ const fr: Messages = {
   willMove: (n, moves) => `${pages(n, "fr")}, ${count(moves, "fr")} ${moves === 1 ? "sera déplacée" : "seront déplacées"}`,
   newOrder: "Nouvel ordre",
   untitled: "Sans titre",
-  moves: "Déplacée",
+  moves: "À déplacer",
   cancel: "Annuler",
   close: "Fermer",
   sortPages: "Trier les pages",
