@@ -50,8 +50,13 @@ export async function requestConfluence(path: string, init?: { method?: string; 
 
 export const view = {
   theme: { enable: async () => {} },
-  getContext: async () => ({ locale: "en-US", extension: { content: { id: "1", title: "Release notes" } } }),
+  // ?locale=fr-FR shows the French UI.
+  getContext: async () => ({ locale: new URLSearchParams(location.search).get("locale") ?? "en-US", extension: { content: { id: "1", title: "Release notes" } } }),
   close: async () => { document.body.dataset.closed = "true"; },
+};
+
+export const router = {
+  reload: async () => { document.body.dataset.closed = "reloaded"; },
 };
 
 // Lets the QA script read the real order after a sort.
